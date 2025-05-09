@@ -7,6 +7,8 @@ using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using OpenTelemetry.Trace.Sampler;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using OpenTelemetryExtensions.Configuration;
 using Serilog;
 
@@ -28,6 +30,13 @@ namespace OpenTelemetryExtensions.Extensions
             return services;
         }
         
+        public static IServiceCollection AddOpenTelemetry(this IServiceCollection services, Action<OpenTelemetryBuilder> configureOptions)
+        {
+            var builder = services.AddOpenTelemetry();
+            configureOptions?.Invoke(builder);
+            return services;
+        }
+        
         private static IServiceCollection AddSerilog(this IServiceCollection services, TelemetryConfig config, IConfiguration configuration)
         {
             var loggerConfiguration = new LoggerConfiguration()
@@ -42,6 +51,14 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static IServiceCollection AddOpenTelemetry(this IServiceCollection services, TelemetryConfig config)
         {
+            if (config.Exporters.AppInsights.Enabled)
+            {
+                services.AddAzureMonitor(options =>
+                {
+                    options.ConnectionString = config.Exporters.AppInsights.ConnectionString;
+                });
+            }
+            
             services.AddOpenTelemetry()
                 .ConfigureResource(resourceBuilder => ConfigureResource(resourceBuilder, config.Resource))
                 .WithTracing(tracerProviderBuilder => ConfigureTracing(tracerProviderBuilder, config))
@@ -74,7 +91,7 @@ namespace OpenTelemetryExtensions.Extensions
             builder
                 .AddHttpClientInstrumentation()
                 .AddAspNetCoreInstrumentation()
-                .SetSampler(new TraceIdRatioSampler(config.Tracer.SampleRate));
+                .SetSampler(new TraceIdRatioBasedSampler(config.Tracer.SampleRate));
             
             ConfigureTracingExporters(builder, config.Exporters);
         }
@@ -88,10 +105,6 @@ namespace OpenTelemetryExtensions.Extensions
             
             if (config.AppInsights.Enabled)
             {
-                builder.UseAzureMonitor(options =>
-                {
-                    options.ConnectionString = config.AppInsights.ConnectionString;
-                });
             }
             
             if (config.Datadog.Enabled)

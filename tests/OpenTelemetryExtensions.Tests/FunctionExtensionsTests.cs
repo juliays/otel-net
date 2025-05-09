@@ -22,7 +22,7 @@ namespace OpenTelemetryExtensions.Tests
             
             functionsHostBuilderMock.SetupGet(x => x.Services).Returns(servicesMock.Object);
             servicesMock.Setup(x => x.BuildServiceProvider()).Returns(serviceProviderMock.Object);
-            serviceProviderMock.Setup(x => x.GetService(typeof(IConfiguration))).Returns(configurationMock.Object);
+            serviceProviderMock.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(IConfiguration)))).Returns(configurationMock.Object);
             
             var result = functionsHostBuilderMock.Object.AddTelemetry();
             
@@ -40,7 +40,7 @@ namespace OpenTelemetryExtensions.Tests
             
             functionsHostBuilderMock.SetupGet(x => x.Services).Returns(servicesMock.Object);
             servicesMock.Setup(x => x.BuildServiceProvider()).Returns(serviceProviderMock.Object);
-            serviceProviderMock.Setup(x => x.GetService(typeof(IConfiguration))).Returns(configurationMock.Object);
+            serviceProviderMock.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(IConfiguration)))).Returns(configurationMock.Object);
             
             var result = functionsHostBuilderMock.Object.AddTelemetry(options => {
                 options.WithTracing(tracerProviderBuilder => {

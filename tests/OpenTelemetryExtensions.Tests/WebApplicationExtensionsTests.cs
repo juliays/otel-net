@@ -18,8 +18,6 @@ namespace OpenTelemetryExtensions.Tests
             var configurationMock = new Mock<IConfiguration>();
             var servicesMock = new Mock<IServiceCollection>();
             
-            var builder = WebApplication.CreateBuilder(new string[] { });
-            
             var memoryConfig = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string>
                 {
@@ -27,7 +25,9 @@ namespace OpenTelemetryExtensions.Tests
                 })
                 .Build();
             
-            builder.Configuration = memoryConfig;
+            var builder = WebApplication.CreateBuilder(new string[] { });
+            
+            builder.Configuration.AddConfiguration(memoryConfig);
             
             var result = builder.AddTelemetry();
             
@@ -37,8 +37,6 @@ namespace OpenTelemetryExtensions.Tests
         [TestMethod]
         public void AddTelemetry_WithConfigureOptions_RegistersServices()
         {
-            var builder = WebApplication.CreateBuilder(new string[] { });
-            
             var memoryConfig = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string>
                 {
@@ -46,7 +44,9 @@ namespace OpenTelemetryExtensions.Tests
                 })
                 .Build();
             
-            builder.Configuration = memoryConfig;
+            var builder = WebApplication.CreateBuilder(new string[] { });
+            
+            builder.Configuration.AddConfiguration(memoryConfig);
             
             var result = builder.AddTelemetry(options => {
                 options.WithTracing(tracerProviderBuilder => {

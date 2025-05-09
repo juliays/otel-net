@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{2C40EA29-2BCB-4175-8E18-6A238229D000}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenTelemetryExtensions", "src\OpenTelemetryExtensions\OpenTelemetryExtensions.csproj", "{F1E079BD-FDBF-4A45-B963-947BF7FB449B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{3349B64E-C04F-411E-A4AA-283463EB0F0C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenTelemetryExtensions.Tests", "tests\OpenTelemetryExtensions.Tests\OpenTelemetryExtensions.Tests.csproj", "{30453306-9956-4CBC-9BD1-2BC5D38629ED}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F1E079BD-FDBF-4A45-B963-947BF7FB449B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1E079BD-FDBF-4A45-B963-947BF7FB449B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1E079BD-FDBF-4A45-B963-947BF7FB449B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1E079BD-FDBF-4A45-B963-947BF7FB449B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30453306-9956-4CBC-9BD1-2BC5D38629ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30453306-9956-4CBC-9BD1-2BC5D38629ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30453306-9956-4CBC-9BD1-2BC5D38629ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30453306-9956-4CBC-9BD1-2BC5D38629ED}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F1E079BD-FDBF-4A45-B963-947BF7FB449B} = {2C40EA29-2BCB-4175-8E18-6A238229D000}
+		{30453306-9956-4CBC-9BD1-2BC5D38629ED} = {3349B64E-C04F-411E-A4AA-283463EB0F0C}
+	EndGlobalSection
+EndGlobal

@@ -7,7 +7,6 @@ using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using OpenTelemetry.Trace.Sampler;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using OpenTelemetryExtensions.Configuration;
 using Serilog;

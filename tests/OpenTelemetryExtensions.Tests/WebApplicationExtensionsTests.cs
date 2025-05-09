@@ -41,6 +41,8 @@ namespace OpenTelemetryExtensions.Tests
             var result = builder.AddTelemetry();
             
             Assert.IsNotNull(result);
+            
+            Assert.IsTrue(builder.Services.Any(s => s.ServiceType.Namespace?.StartsWith("OpenTelemetry") == true));
         }
         
         [TestMethod]
@@ -72,6 +74,8 @@ namespace OpenTelemetryExtensions.Tests
             });
             
             Assert.IsNotNull(result);
+            
+            Assert.IsTrue(builder.Services.Any(s => s.ServiceType.Namespace?.StartsWith("OpenTelemetry") == true));
         }
     }
 }

@@ -15,32 +15,32 @@ namespace OpenTelemetryExtensions.Tests
         [TestMethod]
         public void AddTelemetry_RegistersServices()
         {
-            var functionsHostBuilderMock = new Mock<IFunctionsHostBuilder>();
-            var servicesMock = new Mock<IServiceCollection>();
-            var serviceProviderMock = new Mock<IServiceProvider>();
-            var configurationMock = new Mock<IConfiguration>();
+            var services = new ServiceCollection();
             
-            functionsHostBuilderMock.SetupGet(x => x.Services).Returns(servicesMock.Object);
-            servicesMock.Setup(x => x.BuildServiceProvider()).Returns(serviceProviderMock.Object);
-            serviceProviderMock.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(IConfiguration)))).Returns(configurationMock.Object);
+            var configurationMock = new Mock<IConfiguration>();
+            services.AddSingleton<IConfiguration>(configurationMock.Object);
+            
+            var functionsHostBuilderMock = new Mock<IFunctionsHostBuilder>();
+            functionsHostBuilderMock.SetupGet(x => x.Services).Returns(services);
             
             var result = functionsHostBuilderMock.Object.AddTelemetry();
             
             Assert.IsNotNull(result);
-            servicesMock.Verify(x => x.BuildServiceProvider(), Times.Once);
+            
+            var serviceProvider = services.BuildServiceProvider();
+            Assert.IsNotNull(serviceProvider.GetService<OpenTelemetryBuilder>());
         }
         
         [TestMethod]
         public void AddTelemetry_WithConfigureOptions_RegistersServices()
         {
-            var functionsHostBuilderMock = new Mock<IFunctionsHostBuilder>();
-            var servicesMock = new Mock<IServiceCollection>();
-            var serviceProviderMock = new Mock<IServiceProvider>();
-            var configurationMock = new Mock<IConfiguration>();
+            var services = new ServiceCollection();
             
-            functionsHostBuilderMock.SetupGet(x => x.Services).Returns(servicesMock.Object);
-            servicesMock.Setup(x => x.BuildServiceProvider()).Returns(serviceProviderMock.Object);
-            serviceProviderMock.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(IConfiguration)))).Returns(configurationMock.Object);
+            var configurationMock = new Mock<IConfiguration>();
+            services.AddSingleton<IConfiguration>(configurationMock.Object);
+            
+            var functionsHostBuilderMock = new Mock<IFunctionsHostBuilder>();
+            functionsHostBuilderMock.SetupGet(x => x.Services).Returns(services);
             
             var result = functionsHostBuilderMock.Object.AddTelemetry(options => {
                 options.WithTracing(tracerProviderBuilder => {
@@ -49,7 +49,9 @@ namespace OpenTelemetryExtensions.Tests
             });
             
             Assert.IsNotNull(result);
-            servicesMock.Verify(x => x.BuildServiceProvider(), Times.Once);
+            
+            var serviceProvider = services.BuildServiceProvider();
+            Assert.IsNotNull(serviceProvider.GetService<OpenTelemetryBuilder>());
         }
     }
 }

@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetryExtensions.Extensions;
 
+// [assembly: FunctionsStartup(typeof(OpenTelemetryExtensions.Examples.FunctionStartupExample))]
+
 namespace OpenTelemetryExtensions.Examples
 {
     public static class UsageExamples
@@ -35,7 +37,6 @@ namespace OpenTelemetryExtensions.Examples
         }
     }
 
-    [FunctionsStartup(typeof(FunctionStartupExample))]
     public class FunctionStartupExample : FunctionsStartup
     {
         public override void Configure(IFunctionsHostBuilder builder)

@@ -50,18 +50,13 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static IServiceCollection AddOpenTelemetry(this IServiceCollection services, TelemetryConfig config)
         {
-            if (config.Exporters.AppInsights.Enabled)
-            {
-                services.AddAzureMonitor(options =>
-                {
-                    options.ConnectionString = config.Exporters.AppInsights.ConnectionString;
-                });
-            }
+            var builder = services.AddOpenTelemetry();
             
-            services.AddOpenTelemetry()
-                .ConfigureResource(resourceBuilder => ConfigureResource(resourceBuilder, config.Resource))
-                .WithTracing(tracerProviderBuilder => ConfigureTracing(tracerProviderBuilder, config))
-                .WithMetrics(meterProviderBuilder => ConfigureMetrics(meterProviderBuilder, config));
+            builder.ConfigureResource(resourceBuilder => ConfigureResource(resourceBuilder, config.Resource));
+            
+            builder.WithTracing(tracerProviderBuilder => ConfigureTracing(tracerProviderBuilder, config));
+            
+            builder.WithMetrics(meterProviderBuilder => ConfigureMetrics(meterProviderBuilder, config));
             
             return services;
         }
@@ -104,6 +99,10 @@ namespace OpenTelemetryExtensions.Extensions
             
             if (config.AppInsights.Enabled)
             {
+                builder.AddAzureMonitorTraceExporter(options =>
+                {
+                    options.ConnectionString = config.AppInsights.ConnectionString;
+                });
             }
             
             if (config.Datadog.Enabled)
@@ -135,6 +134,10 @@ namespace OpenTelemetryExtensions.Extensions
             
             if (config.AppInsights.Enabled)
             {
+                builder.AddAzureMonitorTraceExporter(options =>
+                {
+                    options.ConnectionString = config.AppInsights.ConnectionString;
+                });
             }
             
             if (config.Datadog.Enabled)

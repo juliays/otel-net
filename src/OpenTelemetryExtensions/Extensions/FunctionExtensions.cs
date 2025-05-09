@@ -11,7 +11,9 @@ namespace OpenTelemetryExtensions.Extensions
         public static IFunctionsHostBuilder AddTelemetry(this IFunctionsHostBuilder builder)
         {
             var services = builder.Services;
-            var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
+            
+            var serviceProvider = services.BuildServiceProvider();
+            var configuration = serviceProvider.GetService<IConfiguration>() ?? new ConfigurationBuilder().Build();
             
             services.AddTelemetry(configuration);
             return builder;
@@ -20,7 +22,9 @@ namespace OpenTelemetryExtensions.Extensions
         public static IFunctionsHostBuilder AddTelemetry(this IFunctionsHostBuilder builder, Action<OpenTelemetryBuilder> configureOptions)
         {
             var services = builder.Services;
-            var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
+            
+            var serviceProvider = services.BuildServiceProvider();
+            var configuration = serviceProvider.GetService<IConfiguration>() ?? new ConfigurationBuilder().Build();
             
             services.AddTelemetry(configuration);
             

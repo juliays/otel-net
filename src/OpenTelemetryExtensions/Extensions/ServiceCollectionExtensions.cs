@@ -50,6 +50,16 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static IServiceCollection AddOpenTelemetry(this IServiceCollection services, TelemetryConfig config)
         {
+            if (config.Exporters.AppInsights.Enabled)
+            {
+                services.AddOpenTelemetry().UseAzureMonitor(options =>
+                {
+                    options.ConnectionString = config.Exporters.AppInsights.ConnectionString;
+                });
+                
+                return services;
+            }
+            
             var builder = services.AddOpenTelemetry();
             
             builder.ConfigureResource(resourceBuilder => ConfigureResource(resourceBuilder, config.Resource));
@@ -97,13 +107,6 @@ namespace OpenTelemetryExtensions.Extensions
                 builder.AddConsoleExporter();
             }
             
-            if (config.AppInsights.Enabled)
-            {
-                builder.AddAzureMonitorTraceExporter(options =>
-                {
-                    options.ConnectionString = config.AppInsights.ConnectionString;
-                });
-            }
             
             if (config.Datadog.Enabled)
             {
@@ -132,13 +135,6 @@ namespace OpenTelemetryExtensions.Extensions
                 builder.AddConsoleExporter();
             }
             
-            if (config.AppInsights.Enabled)
-            {
-                builder.AddAzureMonitorTraceExporter(options =>
-                {
-                    options.ConnectionString = config.AppInsights.ConnectionString;
-                });
-            }
             
             if (config.Datadog.Enabled)
             {

@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using OpenTelemetry;
 using OpenTelemetryExtensions.Extensions;
+using System;
 using System.Collections.Generic;
 
 namespace OpenTelemetryExtensions.Tests
@@ -21,7 +22,15 @@ namespace OpenTelemetryExtensions.Tests
             var memoryConfig = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string>
                 {
-                    { "telemetry:resource:environment", "test" }
+                    { "telemetry:resource:environment", "test" },
+                    { "telemetry:resource:component", "test-component" },
+                    
+                    { "telemetry:Serilog:MinimumLevel:Default", "Information" },
+                    { "telemetry:Serilog:WriteTo:0:Name", "Console" },
+                    
+                    { "telemetry:exporters:console:enabled", "true" },
+                    
+                    { "telemetry:tracer:sampleRate", "1.0" }
                 })
                 .Build();
             
@@ -40,7 +49,15 @@ namespace OpenTelemetryExtensions.Tests
             var memoryConfig = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string>
                 {
-                    { "telemetry:resource:environment", "test" }
+                    { "telemetry:resource:environment", "test" },
+                    { "telemetry:resource:component", "test-component" },
+                    
+                    { "telemetry:Serilog:MinimumLevel:Default", "Information" },
+                    { "telemetry:Serilog:WriteTo:0:Name", "Console" },
+                    
+                    { "telemetry:exporters:console:enabled", "true" },
+                    
+                    { "telemetry:tracer:sampleRate", "1.0" }
                 })
                 .Build();
             

@@ -6,6 +6,7 @@ using Moq;
 using OpenTelemetry;
 using OpenTelemetryExtensions.Extensions;
 using System;
+using System.Collections.Generic;
 
 namespace OpenTelemetryExtensions.Tests
 {
@@ -17,8 +18,17 @@ namespace OpenTelemetryExtensions.Tests
         {
             var services = new ServiceCollection();
             
-            var configurationMock = new Mock<IConfiguration>();
-            services.AddSingleton<IConfiguration>(configurationMock.Object);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    { "telemetry:resource:environment", "test" },
+                    { "telemetry:resource:component", "test-component" },
+                    { "telemetry:exporters:console:enabled", "true" },
+                    { "telemetry:tracer:sampleRate", "1.0" }
+                })
+                .Build();
+            
+            services.AddSingleton<IConfiguration>(configuration);
             
             var functionsHostBuilderMock = new Mock<IFunctionsHostBuilder>();
             functionsHostBuilderMock.SetupGet(x => x.Services).Returns(services);
@@ -36,8 +46,17 @@ namespace OpenTelemetryExtensions.Tests
         {
             var services = new ServiceCollection();
             
-            var configurationMock = new Mock<IConfiguration>();
-            services.AddSingleton<IConfiguration>(configurationMock.Object);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    { "telemetry:resource:environment", "test" },
+                    { "telemetry:resource:component", "test-component" },
+                    { "telemetry:exporters:console:enabled", "true" },
+                    { "telemetry:tracer:sampleRate", "1.0" }
+                })
+                .Build();
+            
+            services.AddSingleton<IConfiguration>(configuration);
             
             var functionsHostBuilderMock = new Mock<IFunctionsHostBuilder>();
             functionsHostBuilderMock.SetupGet(x => x.Services).Returns(services);

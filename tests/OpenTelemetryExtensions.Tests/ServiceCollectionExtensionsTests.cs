@@ -5,6 +5,7 @@ using Moq;
 using OpenTelemetry;
 using OpenTelemetryExtensions.Configuration;
 using OpenTelemetryExtensions.Extensions;
+using System;
 using System.Collections.Generic;
 
 namespace OpenTelemetryExtensions.Tests
@@ -16,13 +17,22 @@ namespace OpenTelemetryExtensions.Tests
         public void AddTelemetry_RegistersServices()
         {
             var services = new ServiceCollection();
-            var configurationMock = new Mock<IConfiguration>();
-            var configurationSectionMock = new Mock<IConfigurationSection>();
             
-            configurationMock.Setup(c => c.GetSection(TelemetryConfig.SectionName))
-                .Returns(configurationSectionMock.Object);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    { "telemetry:resource:environment", "test" },
+                    { "telemetry:resource:component", "test-component" },
+                    { "telemetry:exporters:console:enabled", "true" },
+                    { "telemetry:tracer:sampleRate", "1.0" },
+                    { "telemetry:Serilog:MinimumLevel:Default", "Information" },
+                    { "telemetry:Serilog:WriteTo:0:Name", "Console" }
+                })
+                .Build();
             
-            services.AddTelemetry(configurationMock.Object);
+            services.AddLogging();
+            
+            services.AddTelemetry(configuration);
             
             var serviceProvider = services.BuildServiceProvider();
             Assert.IsNotNull(serviceProvider.GetService<OpenTelemetryBuilder>());
@@ -32,30 +42,27 @@ namespace OpenTelemetryExtensions.Tests
         public void AddTelemetry_WithAppInsightsEnabled_ConfiguresAzureMonitor()
         {
             var services = new ServiceCollection();
-            var configurationMock = new Mock<IConfiguration>();
-            var configurationSectionMock = new Mock<IConfigurationSection>();
             
-            var telemetryConfig = new TelemetryConfig
-            {
-                Exporters = new ExporterConfig
-                {
-                    AppInsights = new AppInsightsExporterConfig
-                    {
-                        Enabled = true,
-                        ConnectionString = "test-connection-string"
-                    }
-                }
-            };
-            
-            var memoryConfig = new ConfigurationBuilder()
+            var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string>
                 {
-                    { $"{TelemetryConfig.SectionName}:Exporters:AppInsights:Enabled", "true" },
-                    { $"{TelemetryConfig.SectionName}:Exporters:AppInsights:ConnectionString", "test-connection-string" }
+                    { "telemetry:resource:environment", "test" },
+                    { "telemetry:resource:component", "test-component" },
+                    
+                    { "telemetry:Serilog:MinimumLevel:Default", "Information" },
+                    { "telemetry:Serilog:WriteTo:0:Name", "Console" },
+                    
+                    // AppInsights exporter configuration
+                    { "telemetry:exporters:appInsights:enabled", "true" },
+                    { "telemetry:exporters:appInsights:connectionString", "test-connection-string" },
+                    
+                    { "telemetry:tracer:sampleRate", "1.0" }
                 })
                 .Build();
             
-            services.AddTelemetry(memoryConfig);
+            services.AddLogging();
+            
+            services.AddTelemetry(configuration);
             
             var serviceProvider = services.BuildServiceProvider();
             Assert.IsNotNull(serviceProvider.GetService<OpenTelemetryBuilder>());
@@ -66,16 +73,30 @@ namespace OpenTelemetryExtensions.Tests
         {
             var services = new ServiceCollection();
             
-            var memoryConfig = new ConfigurationBuilder()
+            var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string>
                 {
-                    { $"{TelemetryConfig.SectionName}:Exporters:Datadog:Enabled", "true" },
-                    { $"{TelemetryConfig.SectionName}:Exporters:Datadog:Endpoint", "https://api.datadoghq.com" },
-                    { $"{TelemetryConfig.SectionName}:Exporters:Datadog:ApiKey", "test-api-key" }
+                    // Resource configuration
+                    { "telemetry:resource:environment", "test" },
+                    { "telemetry:resource:component", "test-component" },
+                    
+                    // Serilog configuration
+                    { "telemetry:Serilog:MinimumLevel:Default", "Information" },
+                    { "telemetry:Serilog:WriteTo:0:Name", "Console" },
+                    
+                    // Datadog exporter configuration
+                    { "telemetry:exporters:datadog:enabled", "true" },
+                    { "telemetry:exporters:datadog:endpoint", "https://api.datadoghq.com" },
+                    { "telemetry:exporters:datadog:apiKey", "test-api-key" },
+                    
+                    // Tracer configuration
+                    { "telemetry:tracer:sampleRate", "1.0" }
                 })
                 .Build();
             
-            services.AddTelemetry(memoryConfig);
+            services.AddLogging();
+            
+            services.AddTelemetry(configuration);
             
             var serviceProvider = services.BuildServiceProvider();
             Assert.IsNotNull(serviceProvider.GetService<OpenTelemetryBuilder>());

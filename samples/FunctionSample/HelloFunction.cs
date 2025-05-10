@@ -1,29 +1,38 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry;
+using OpenTelemetry.Context;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 namespace FunctionSample
 {
     public class HelloFunction
     {
         private readonly ILogger _logger;
-        private static readonly ActivitySource _activitySource = new ActivitySource("FunctionSample");
-        private static readonly Meter _meter = new Meter("FunctionSample", "1.0.0");
+        private readonly TracerProvider _tracerProvider;
+        private readonly MeterProvider _meterProvider;
+        private readonly Tracer _tracer;
+        private readonly OpenTelemetry.Metrics.Meter _meter;
         
-        private readonly Counter<int> _requestCounter;
+        private readonly Counter<long> _requestCounter;
         private readonly Histogram<double> _requestDuration;
 
-        public HelloFunction(ILoggerFactory loggerFactory)
+        public HelloFunction(ILoggerFactory loggerFactory, TracerProvider tracerProvider, MeterProvider meterProvider)
         {
             _logger = loggerFactory.CreateLogger<HelloFunction>();
+            _tracerProvider = tracerProvider;
+            _meterProvider = meterProvider;
             
-            _requestCounter = _meter.CreateCounter<int>("function.requests");
+            _tracer = _tracerProvider.GetTracer("FunctionSample");
+            _meter = _meterProvider.GetMeter("FunctionSample");
+            
+            _requestCounter = _meter.CreateCounter<long>("function.requests");
             _requestDuration = _meter.CreateHistogram<double>("function.request.duration");
         }
 
@@ -32,52 +41,54 @@ namespace FunctionSample
         {
             _logger.LogInformation("Processing HTTP trigger function request");
             
-            using var activity = _activitySource.StartActivity("HelloFunction", ActivityKind.Server);
-            activity?.SetTag("function.name", "Hello");
-            activity?.SetTag("request.method", req.Method);
-            activity?.SetTag("request.url", req.Url.ToString());
-            activity?.SetTag("request.time", DateTime.UtcNow);
-            
-            _requestCounter.Add(1, new KeyValuePair<string, object?>("function", "Hello"));
-            
-            var startTime = DateTime.UtcNow;
-            
-            try
+            var span = _tracer.StartSpan("HelloFunction", SpanKind.Server);
+            using (span)
             {
-                _logger.LogDebug("Generating response for HTTP trigger function");
+                span.SetAttribute("function.name", "Hello");
+                span.SetAttribute("request.method", req.Method);
+                span.SetAttribute("request.url", req.Url.ToString());
+                span.SetAttribute("request.time", DateTime.UtcNow.ToString("o"));
                 
-                var response = req.CreateResponse(HttpStatusCode.OK);
-                response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-                response.WriteString("Hello from OpenTelemetry-enabled Azure Function!");
+                _requestCounter.Add(1, new KeyValuePair<string, object>("function", "Hello"));
                 
-                _logger.LogInformation("Successfully processed HTTP trigger function request");
+                var startTime = DateTime.UtcNow;
                 
-                return response;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing HTTP trigger function request");
-                
-                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-                
-                _requestCounter.Add(1, new KeyValuePair<string, object?>("result", "error"));
-                
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                errorResponse.WriteString("An error occurred processing your request.");
-                return errorResponse;
-            }
-            finally
-            {
-                var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
-                _requestDuration.Record(duration, new KeyValuePair<string, object?>("function", "Hello"));
-                
-                activity?.AddEvent(new ActivityEvent("Function completed", 
-                    DateTime.UtcNow, 
-                    new ActivityTagsCollection { 
+                try
+                {
+                    _logger.LogDebug("Generating response for HTTP trigger function");
+                    
+                    var response = req.CreateResponse(HttpStatusCode.OK);
+                    response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
+                    response.WriteString("Hello from OpenTelemetry-enabled Azure Function!");
+                    
+                    _logger.LogInformation("Successfully processed HTTP trigger function request");
+                    
+                    return response;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing HTTP trigger function request");
+                    
+                    span.SetStatus(Status.Error.WithDescription(ex.Message));
+                    
+                    _requestCounter.Add(1, new KeyValuePair<string, object>("result", "error"));
+                    
+                    var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+                    errorResponse.WriteString("An error occurred processing your request.");
+                    return errorResponse;
+                }
+                finally
+                {
+                    var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                    _requestDuration.Record(duration, new KeyValuePair<string, object>("function", "Hello"));
+                    
+                    span.AddEvent("Function completed", new SpanAttributes
+                    {
                         { "duration_ms", duration }
-                    }));
-                
-                _logger.LogDebug("Function execution completed in {DurationMs}ms", duration);
+                    });
+                    
+                    _logger.LogDebug("Function execution completed in {DurationMs}ms", duration);
+                }
             }
         }
         
@@ -87,41 +98,46 @@ namespace FunctionSample
         {
             _logger.LogInformation("Processing linked operations function request");
             
-            using var parentActivity = _activitySource.StartActivity("ProcessWithLinks", ActivityKind.Server);
-            parentActivity?.SetTag("function.name", "ProcessWithLinks");
-            parentActivity?.SetTag("request.method", req.Method);
+            var parentSpan = _tracer.StartSpan("ProcessWithLinks", SpanKind.Server);
+            var parentContext = parentSpan.Context;
             
-            _requestCounter.Add(1, new KeyValuePair<string, object?>("function", "ProcessWithLinks"));
-            
-            var startTime = DateTime.UtcNow;
-            
-            try
+            using (parentSpan)
             {
-                await PerformOperationAsync("FirstOperation");
+                parentSpan.SetAttribute("function.name", "ProcessWithLinks");
+                parentSpan.SetAttribute("request.method", req.Method);
                 
-                await PerformLinkedOperationAsync("SecondOperation", parentActivity);
+                _requestCounter.Add(1, new KeyValuePair<string, object>("function", "ProcessWithLinks"));
                 
-                _logger.LogInformation("Successfully processed linked operations");
+                var startTime = DateTime.UtcNow;
                 
-                var response = req.CreateResponse(HttpStatusCode.OK);
-                response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-                response.WriteString("Linked operations completed successfully!");
-                
-                return response;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing linked operations");
-                parentActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-                
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                errorResponse.WriteString("An error occurred processing your request.");
-                return errorResponse;
-            }
-            finally
-            {
-                var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
-                _requestDuration.Record(duration, new KeyValuePair<string, object?>("function", "ProcessWithLinks"));
+                try
+                {
+                    await PerformOperationAsync("FirstOperation", parentContext);
+                    
+                    await PerformLinkedOperationAsync("SecondOperation", parentContext);
+                    
+                    _logger.LogInformation("Successfully processed linked operations");
+                    
+                    var response = req.CreateResponse(HttpStatusCode.OK);
+                    response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
+                    response.WriteString("Linked operations completed successfully!");
+                    
+                    return response;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing linked operations");
+                    parentSpan.SetStatus(Status.Error.WithDescription(ex.Message));
+                    
+                    var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+                    errorResponse.WriteString("An error occurred processing your request.");
+                    return errorResponse;
+                }
+                finally
+                {
+                    var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                    _requestDuration.Record(duration, new KeyValuePair<string, object>("function", "ProcessWithLinks"));
+                }
             }
         }
         
@@ -131,15 +147,15 @@ namespace FunctionSample
         {
             _logger.LogInformation("Processing metrics recording function request");
             
-            var customGauge = _meter.CreateObservableGauge("custom.value", () => 
+            _meter.CreateObservableGauge("custom.value", () => 
             {
                 return new[] { new Measurement<double>(42.0) };
             });
             
-            var operationCounter = _meter.CreateCounter<int>("custom.operations");
+            var operationCounter = _meter.CreateCounter<long>("custom.operations");
             
-            operationCounter.Add(1, new KeyValuePair<string, object?>("operation", "read"));
-            operationCounter.Add(2, new KeyValuePair<string, object?>("operation", "write"));
+            operationCounter.Add(1, new KeyValuePair<string, object>("operation", "read"));
+            operationCounter.Add(2, new KeyValuePair<string, object>("operation", "write"));
             
             _logger.LogInformation("Metrics recorded successfully");
             
@@ -150,46 +166,43 @@ namespace FunctionSample
             return response;
         }
         
-        private async Task PerformOperationAsync(string operationName)
+        private async Task PerformOperationAsync(string operationName, SpanContext parentContext)
         {
-            using var childActivity = _activitySource.StartActivity(
-                operationName, 
-                ActivityKind.Internal, 
-                parentContext: Activity.Current?.Context);
+            using var scope = parentContext.IsValid ? Baggage.Current.Activate() : default;
+            
+            var childSpan = _tracer.StartSpan(operationName, SpanKind.Internal);
+            using (childSpan)
+            {
+                childSpan.SetAttribute("operation.name", operationName);
                 
-            childActivity?.SetTag("operation.name", operationName);
-            
-            _logger.LogInformation("Performing operation: {OperationName}", operationName);
-            
-            await Task.Delay(100);
-            
-            _logger.LogDebug("Operation completed: {OperationName}", operationName);
+                _logger.LogInformation("Performing operation: {OperationName}", operationName);
+                
+                await Task.Delay(100);
+                
+                _logger.LogDebug("Operation completed: {OperationName}", operationName);
+            }
         }
         
-        private async Task PerformLinkedOperationAsync(string operationName, Activity? parentActivity)
+        private async Task PerformLinkedOperationAsync(string operationName, SpanContext parentContext)
         {
-            var links = new List<ActivityLink>();
-            if (parentActivity != null)
-            {
-                links.Add(new ActivityLink(parentActivity.Context));
-            }
-            
-            using var linkedActivity = _activitySource.StartActivity(
+            var linkedSpan = _tracer.StartSpan(
                 operationName,
-                ActivityKind.Internal,
-                parentContext: Activity.Current?.Context,
-                links: links);
+                SpanKind.Internal,
+                new SpanContext(parentContext.TraceId, SpanId.CreateRandom(), parentContext.TraceFlags, parentContext.IsRemote));
                 
-            linkedActivity?.SetTag("operation.name", operationName);
-            linkedActivity?.SetTag("has_link", "true");
-            
-            _logger.LogInformation("Performing linked operation: {OperationName}", operationName);
-            
-            await Task.Delay(150);
-            
-            linkedActivity?.AddEvent(new ActivityEvent("Processing step completed"));
-            
-            _logger.LogDebug("Linked operation completed: {OperationName}", operationName);
+            using (linkedSpan)
+            {
+                linkedSpan.SetAttribute("operation.name", operationName);
+                linkedSpan.SetAttribute("has_link", true);
+                
+                _logger.LogInformation("Performing linked operation: {OperationName}", operationName);
+                
+                await Task.Delay(150);
+                
+                linkedSpan.AddEvent("Processing step completed");
+                
+                _logger.LogDebug("Linked operation completed: {OperationName}", operationName);
+            }
         }
     }
 }

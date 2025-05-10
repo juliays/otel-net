@@ -56,11 +56,11 @@ namespace OpenTelemetryExtensions.Extensions
                 ["service.name"] = config.Resource.Component
             };
             
-            var loggerConfiguration = new LoggerConfiguration();
+            var loggerConfiguration = new LoggerConfiguration()
+                .ReadFrom.Configuration(configuration.GetSection($"{TelemetryConfig.SectionName}:Serilog"));
             
+            // This will override any console sink from configuration
             loggerConfiguration.WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter());
-            
-            loggerConfiguration.ReadFrom.Configuration(configuration.GetSection($"{TelemetryConfig.SectionName}:Serilog"));
             
             loggerConfiguration
                 .Enrich.WithSpan()
@@ -85,6 +85,8 @@ namespace OpenTelemetryExtensions.Extensions
                     Serilog.Context.LogContext.PushProperty(attribute.Key, attribute.Value);
                 }
             });
+            
+            services.AddSingleton(Log.Logger);
             
             return services;
         }
@@ -141,7 +143,13 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static void ConfigureTracingExporters(TracerProviderBuilder builder, ExporterConfig config)
         {
-            builder.AddConsoleExporter();
+            if (config.Console.Enabled)
+            {
+                builder.AddConsoleExporter(options => 
+                {
+                    options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Debug;
+                });
+            }
             
             if (config.Datadog.Enabled)
             {
@@ -165,7 +173,13 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static void ConfigureMetricsExporters(MeterProviderBuilder builder, ExporterConfig config)
         {
-            builder.AddConsoleExporter();
+            if (config.Console.Enabled)
+            {
+                builder.AddConsoleExporter(options => 
+                {
+                    options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Debug;
+                });
+            }
             
             if (config.Datadog.Enabled)
             {

@@ -39,7 +39,19 @@ namespace OpenTelemetryExtensions.Extensions
         private static IServiceCollection AddSerilog(this IServiceCollection services, TelemetryConfig config, IConfiguration configuration)
         {
             var loggerConfiguration = new LoggerConfiguration()
-                .ReadFrom.Configuration(configuration.GetSection($"{TelemetryConfig.SectionName}:Serilog"));
+                .ReadFrom.Configuration(configuration.GetSection($"{TelemetryConfig.SectionName}:Serilog"))
+                .Enrich.WithProperty("environment", config.Resource.Environment)
+                .Enrich.WithProperty("workspace_id", config.Resource.WorkspaceId)
+                .Enrich.WithProperty("notebook_id", config.Resource.NotebookId)
+                .Enrich.WithProperty("livy_id", config.Resource.LivyId)
+                .Enrich.WithProperty("region", config.Resource.Region)
+                .Enrich.WithProperty("website_name", config.Resource.WebsiteName)
+                .Enrich.WithProperty("website_instance", config.Resource.WebsiteInstance)
+                .Enrich.WithProperty("mnd-applicationid", config.Resource.ApplicationId)
+                .Enrich.WithProperty("cloud_provider", config.Resource.CloudProvider)
+                .Enrich.WithProperty("opt-dora", config.Resource.OptDora)
+                .Enrich.WithProperty("opt-service-id", config.Resource.OptServiceId)
+                .Enrich.WithProperty("service.name", config.Resource.Component);
             
             Log.Logger = loggerConfiguration.CreateLogger();
             

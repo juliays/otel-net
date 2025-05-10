@@ -9,6 +9,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using OpenTelemetryExtensions.Configuration;
+using OpenTelemetryExtensions.Enrichers;
 using Serilog;
 
 namespace OpenTelemetryExtensions.Extensions
@@ -38,24 +39,44 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static IServiceCollection AddSerilog(this IServiceCollection services, TelemetryConfig config, IConfiguration configuration)
         {
+            var resourceAttributes = new Dictionary<string, object>
+            {
+                ["environment"] = config.Resource.Environment,
+                ["workspace_id"] = config.Resource.WorkspaceId,
+                ["notebook_id"] = config.Resource.NotebookId,
+                ["livy_id"] = config.Resource.LivyId,
+                ["region"] = config.Resource.Region,
+                ["website_name"] = config.Resource.WebsiteName,
+                ["website_instance"] = config.Resource.WebsiteInstance,
+                ["mnd-applicationid"] = config.Resource.ApplicationId,
+                ["cloud_provider"] = config.Resource.CloudProvider,
+                ["opt-dora"] = config.Resource.OptDora,
+                ["opt-service-id"] = config.Resource.OptServiceId,
+                ["service.name"] = config.Resource.Component
+            };
+            
             var loggerConfiguration = new LoggerConfiguration()
                 .ReadFrom.Configuration(configuration.GetSection($"{TelemetryConfig.SectionName}:Serilog"))
-                .Enrich.WithProperty("environment", config.Resource.Environment)
-                .Enrich.WithProperty("workspace_id", config.Resource.WorkspaceId)
-                .Enrich.WithProperty("notebook_id", config.Resource.NotebookId)
-                .Enrich.WithProperty("livy_id", config.Resource.LivyId)
-                .Enrich.WithProperty("region", config.Resource.Region)
-                .Enrich.WithProperty("website_name", config.Resource.WebsiteName)
-                .Enrich.WithProperty("website_instance", config.Resource.WebsiteInstance)
-                .Enrich.WithProperty("mnd-applicationid", config.Resource.ApplicationId)
-                .Enrich.WithProperty("cloud_provider", config.Resource.CloudProvider)
-                .Enrich.WithProperty("opt-dora", config.Resource.OptDora)
-                .Enrich.WithProperty("opt-service-id", config.Resource.OptServiceId)
-                .Enrich.WithProperty("service.name", config.Resource.Component);
+                .Enrich.WithSpan()
+                .Enrich.With<TraceContextEnricher>()
+                .Enrich.WithProperty("ResourceAttributes", resourceAttributes);
+            
+            foreach (var attribute in resourceAttributes)
+            {
+                loggerConfiguration.Enrich.WithProperty(attribute.Key, attribute.Value);
+            }
             
             Log.Logger = loggerConfiguration.CreateLogger();
             
-            services.AddLogging(builder => builder.AddSerilog(dispose: true));
+            services.AddLogging(builder => 
+            {
+                builder.AddSerilog(dispose: true);
+                
+                foreach (var attribute in resourceAttributes)
+                {
+                    Serilog.Context.LogContext.PushProperty(attribute.Key, attribute.Value);
+                }
+            });
             
             return services;
         }

@@ -5,6 +5,8 @@ using OpenTelemetry.Context;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Diagnostics.Metrics;
+using System.Diagnostics;
 
 namespace TelemetryLibrary
 {
@@ -12,7 +14,7 @@ namespace TelemetryLibrary
     {
         private readonly ILogger<SimpleService> _logger;
         private readonly Tracer _tracer;
-        private readonly OpenTelemetry.Metrics.Meter _meter;
+        private readonly Meter _meter;
         private readonly Counter<long> _operationCounter;
         
         public SimpleService(
@@ -22,9 +24,9 @@ namespace TelemetryLibrary
         {
             _logger = logger;
             _tracer = tracerProvider.GetTracer("TelemetryLibrary");
-            _meter = meterProvider.GetMeter("TelemetryLibrary");
+            _meter = new Meter("TelemetryLibrary");
             
-            _operationCounter = _meter.CreateCounter<long>("library.operations");
+            _operationCounter = _meter.CreateCounter<long>("library.operations", "count", "Number of library operations");
         }
         
         public void PrintMessage(string message)
@@ -60,7 +62,7 @@ namespace TelemetryLibrary
                 var linkedSpan = _tracer.StartSpan(
                     "LinkedOperation",
                     SpanKind.Internal,
-                    new SpanContext(parentContext.TraceId, SpanId.CreateRandom(), parentContext.TraceFlags, parentContext.IsRemote));
+                    new SpanContext(parentContext.TraceId, ActivitySpanId.CreateRandom(), parentContext.TraceFlags, parentContext.IsRemote));
                     
                 using (linkedSpan)
                 {

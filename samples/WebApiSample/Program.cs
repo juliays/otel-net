@@ -11,6 +11,8 @@ using OpenTelemetry.Trace;
 using OpenTelemetryExtensions.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Threading.Tasks;
 using TelemetryLibrary;
 
@@ -32,7 +34,7 @@ var tracerProvider = app.Services.GetRequiredService<TracerProvider>();
 var meterProvider = app.Services.GetRequiredService<MeterProvider>();
 
 var tracer = tracerProvider.GetTracer(ServiceName);
-var meter = meterProvider.GetMeter(ServiceName);
+var meter = new Meter(ServiceName);
 
 var requestCounter = meter.CreateCounter<long>("http.requests");
 var requestDuration = meter.CreateHistogram<double>("http.request.duration");
@@ -85,10 +87,7 @@ app.MapGet("/hello", (ILogger<Program> logger, SimpleService simpleService) =>
             var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
             requestDuration.Record(duration, new KeyValuePair<string, object>("endpoint", "/hello"));
             
-            span.AddEvent("Request completed", new SpanAttributes
-            {
-                { "duration_ms", duration }
-            });
+            span.AddEvent("Request completed");
         }
     }
 });
@@ -157,7 +156,7 @@ app.MapGet("/metrics", (ILogger<Program> logger, SimpleService simpleService) =>
 
 async Task PerformOperationAsync(string operationName, ILogger logger, Tracer tracer, SpanContext parentContext)
 {
-    using var scope = parentContext.IsValid ? Baggage.Current.Activate() : default;
+    using var scope = new Activity("OperationScope").Start();
     
     var childSpan = tracer.StartSpan(operationName, SpanKind.Internal);
     using (childSpan)
@@ -174,10 +173,7 @@ async Task PerformOperationAsync(string operationName, ILogger logger, Tracer tr
 
 async Task PerformLinkedOperationAsync(string operationName, ILogger logger, Tracer tracer, SpanContext parentContext)
 {
-    var linkedSpan = tracer.StartSpan(
-        operationName,
-        SpanKind.Internal,
-        new SpanContext(parentContext.TraceId, SpanId.CreateRandom(), parentContext.TraceFlags, parentContext.IsRemote));
+    var linkedSpan = tracer.StartSpan(operationName, SpanKind.Internal);
         
     using (linkedSpan)
     {
@@ -213,7 +209,7 @@ app.MapGet("/with-baggage", (HttpRequest request, ILogger<Program> logger, Simpl
                 var parts = item.Split('=');
                 if (parts.Length == 2)
                 {
-                    Baggage.SetBaggage(parts[0].Trim(), parts[1].Trim());
+                    Activity.Current?.AddBaggage(parts[0].Trim(), parts[1].Trim());
                     
                     span.SetAttribute($"baggage.{parts[0].Trim()}", parts[1].Trim());
                     
@@ -227,10 +223,9 @@ app.MapGet("/with-baggage", (HttpRequest request, ILogger<Program> logger, Simpl
             simpleService.PrintMessage("No baggage header found in request");
         }
         
-        var currentBaggage = Baggage.GetBaggage();
         var baggageInfo = new Dictionary<string, string>();
         
-        foreach (var item in currentBaggage)
+        foreach (var item in Activity.Current?.Baggage ?? new List<KeyValuePair<string, string>>())
         {
             baggageInfo[item.Key] = item.Value;
         }

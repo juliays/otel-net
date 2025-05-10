@@ -56,11 +56,15 @@ namespace OpenTelemetryExtensions.Extensions
                 ["service.name"] = config.Resource.Component
             };
             
-            var loggerConfiguration = new LoggerConfiguration()
-                .ReadFrom.Configuration(configuration.GetSection($"{TelemetryConfig.SectionName}:Serilog"))
+            var loggerConfiguration = new LoggerConfiguration();
+            
+            loggerConfiguration.WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter());
+            
+            loggerConfiguration.ReadFrom.Configuration(configuration.GetSection($"{TelemetryConfig.SectionName}:Serilog"));
+            
+            loggerConfiguration
                 .Enrich.WithSpan()
-                .Enrich.With<TraceContextEnricher>()
-                .Enrich.WithProperty("ResourceAttributes", resourceAttributes);
+                .Enrich.With<TraceContextEnricher>();
             
             foreach (var attribute in resourceAttributes)
             {
@@ -71,7 +75,10 @@ namespace OpenTelemetryExtensions.Extensions
             
             services.AddLogging(builder => 
             {
-                builder.AddSerilog(dispose: true);
+                // Clear existing providers to ensure Serilog is the only one
+                builder.ClearProviders();
+                
+                builder.AddSerilog(Log.Logger, dispose: true);
                 
                 foreach (var attribute in resourceAttributes)
                 {

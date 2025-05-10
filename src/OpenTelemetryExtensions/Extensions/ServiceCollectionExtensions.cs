@@ -83,16 +83,6 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static IServiceCollection AddOpenTelemetry(this IServiceCollection services, TelemetryConfig config)
         {
-            if (config.Exporters.AppInsights.Enabled)
-            {
-                services.AddOpenTelemetry().UseAzureMonitor(options =>
-                {
-                    options.ConnectionString = config.Exporters.AppInsights.ConnectionString;
-                });
-                
-                return services;
-            }
-            
             var builder = services.AddOpenTelemetry();
             
             builder.ConfigureResource(resourceBuilder => ConfigureResource(resourceBuilder, config.Resource));
@@ -100,6 +90,14 @@ namespace OpenTelemetryExtensions.Extensions
             builder.WithTracing(tracerProviderBuilder => ConfigureTracing(tracerProviderBuilder, config));
             
             builder.WithMetrics(meterProviderBuilder => ConfigureMetrics(meterProviderBuilder, config));
+            
+            if (config.Exporters.AppInsights.Enabled)
+            {
+                builder.UseAzureMonitor(options =>
+                {
+                    options.ConnectionString = config.Exporters.AppInsights.ConnectionString;
+                });
+            }
             
             return services;
         }
@@ -135,11 +133,7 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static void ConfigureTracingExporters(TracerProviderBuilder builder, ExporterConfig config)
         {
-            if (config.Console.Enabled)
-            {
-                builder.AddConsoleExporter();
-            }
-            
+            builder.AddConsoleExporter();
             
             if (config.Datadog.Enabled)
             {
@@ -163,11 +157,7 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static void ConfigureMetricsExporters(MeterProviderBuilder builder, ExporterConfig config)
         {
-            if (config.Console.Enabled)
-            {
-                builder.AddConsoleExporter();
-            }
-            
+            builder.AddConsoleExporter();
             
             if (config.Datadog.Enabled)
             {

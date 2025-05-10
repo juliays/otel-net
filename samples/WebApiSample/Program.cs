@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using OpenTelemetry;
 using OpenTelemetry.Context;
 using OpenTelemetry.Metrics;
@@ -11,6 +12,7 @@ using OpenTelemetryExtensions.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using TelemetryLibrary;
 
 const string ServiceName = "WebApiSample";
 
@@ -19,6 +21,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddTransient<SimpleService>();
 
 builder.AddTelemetry();
 
@@ -43,7 +47,7 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
-app.MapGet("/hello", (ILogger<Program> logger) => 
+app.MapGet("/hello", (ILogger<Program> logger, SimpleService simpleService) => 
 {
     logger.LogInformation("Processing /hello request");
     
@@ -60,6 +64,8 @@ app.MapGet("/hello", (ILogger<Program> logger) =>
         try
         {
             logger.LogDebug("Generating hello response");
+            
+            simpleService.PrintMessage("Processing endpoint: /hello");
             
             Task.Delay(50).Wait();
             
@@ -87,7 +93,7 @@ app.MapGet("/hello", (ILogger<Program> logger) =>
     }
 });
 
-app.MapGet("/linked-operation", async (ILogger<Program> logger) => 
+app.MapGet("/linked-operation", async (ILogger<Program> logger, SimpleService simpleService) => 
 {
     logger.LogInformation("Processing /linked-operation request");
     
@@ -104,6 +110,8 @@ app.MapGet("/linked-operation", async (ILogger<Program> logger) =>
         
         try
         {
+            simpleService.PrintMessage("Processing endpoint: /linked-operation");
+            
             await PerformOperationAsync("FirstOperation", logger, tracer, parentContext);
             
             await PerformLinkedOperationAsync("SecondOperation", logger, tracer, parentContext);
@@ -126,9 +134,11 @@ app.MapGet("/linked-operation", async (ILogger<Program> logger) =>
     }
 });
 
-app.MapGet("/metrics", (ILogger<Program> logger) => 
+app.MapGet("/metrics", (ILogger<Program> logger, SimpleService simpleService) => 
 {
     logger.LogInformation("Processing /metrics request");
+    
+    simpleService.PrintMessage("Processing endpoint: /metrics");
     
     meter.CreateObservableGauge("custom.value", () => 
     {
@@ -183,5 +193,56 @@ async Task PerformLinkedOperationAsync(string operationName, ILogger logger, Tra
         logger.LogDebug("Linked operation completed: {OperationName}", operationName);
     }
 }
+
+app.MapGet("/with-baggage", (HttpRequest request, ILogger<Program> logger, SimpleService simpleService) =>
+{
+    logger.LogInformation("Processing /with-baggage request");
+    
+    var span = tracer.StartSpan("BaggageEndpoint", SpanKind.Server);
+    using (span)
+    {
+        span.SetAttribute("endpoint", "/with-baggage");
+        
+        if (request.Headers.TryGetValue("baggage", out StringValues baggageHeader))
+        {
+            logger.LogInformation("Received baggage header: {BaggageHeader}", baggageHeader.ToString());
+            
+            var baggageItems = baggageHeader.ToString().Split(',');
+            foreach (var item in baggageItems)
+            {
+                var parts = item.Split('=');
+                if (parts.Length == 2)
+                {
+                    Baggage.SetBaggage(parts[0].Trim(), parts[1].Trim());
+                    
+                    span.SetAttribute($"baggage.{parts[0].Trim()}", parts[1].Trim());
+                    
+                    simpleService.PrintMessage($"Baggage item: {parts[0].Trim()}={parts[1].Trim()}");
+                }
+            }
+        }
+        else
+        {
+            logger.LogInformation("No baggage header found");
+            simpleService.PrintMessage("No baggage header found in request");
+        }
+        
+        var currentBaggage = Baggage.GetBaggage();
+        var baggageInfo = new Dictionary<string, string>();
+        
+        foreach (var item in currentBaggage)
+        {
+            baggageInfo[item.Key] = item.Value;
+        }
+        
+        simpleService.PrintMessage($"Processing endpoint: /with-baggage");
+        
+        return Results.Ok(new
+        {
+            message = "Baggage processed successfully",
+            baggage = baggageInfo
+        });
+    }
+});
 
 app.Run();

@@ -11,6 +11,7 @@ using Azure.Monitor.OpenTelemetry.AspNetCore;
 using OpenTelemetryExtensions.Configuration;
 using OpenTelemetryExtensions.Enrichers;
 using Serilog;
+using Serilog.Enrichers.Span;
 
 namespace OpenTelemetryExtensions.Extensions
 {

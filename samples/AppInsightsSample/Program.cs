@@ -3,19 +3,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
+using OpenTelemetry.Context;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using OpenTelemetryExtensions.Extensions;
 using System;
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AppInsightsSample
 {
     public class Program
     {
-        private static readonly ActivitySource _activitySource = new ActivitySource("AppInsightsSample");
-        private static readonly Meter _meter = new Meter("AppInsightsSample", "1.0.0");
+        private static readonly string ServiceName = "AppInsightsSample";
         
         public static async Task Main(string[] args)
         {
@@ -27,9 +27,6 @@ namespace AppInsightsSample
                 .ConfigureServices((context, services) =>
                 {
                     services.AddTransient<SampleService>();
-                    
-                    services.AddSingleton(_activitySource);
-                    services.AddSingleton(_meter);
                 })
                 .AddTelemetry()
                 .Build();
@@ -39,8 +36,10 @@ namespace AppInsightsSample
             
             try
             {
-                var startupCounter = _meter.CreateCounter<int>("application.startup");
-                startupCounter.Add(1, new KeyValuePair<string, object?>("success", true));
+                var meterProvider = host.Services.GetRequiredService<MeterProvider>();
+                var meter = meterProvider.GetMeter(ServiceName);
+                var startupCounter = meter.CreateCounter<long>("application.startup");
+                startupCounter.Add(1, new KeyValuePair<string, object>("success", true));
                 
                 var sampleService = host.Services.GetRequiredService<SampleService>();
                 await sampleService.RunAsync();
@@ -61,105 +60,110 @@ namespace AppInsightsSample
     public class SampleService
     {
         private readonly ILogger<SampleService> _logger;
-        private readonly ActivitySource _activitySource;
-        private readonly Meter _meter;
+        private readonly TracerProvider _tracerProvider;
+        private readonly MeterProvider _meterProvider;
+        private readonly Tracer _tracer;
+        private readonly OpenTelemetry.Metrics.Meter _meter;
         
-        public SampleService(ILogger<SampleService> logger, ActivitySource activitySource, Meter meter)
+        public SampleService(ILogger<SampleService> logger, TracerProvider tracerProvider, MeterProvider meterProvider)
         {
             _logger = logger;
-            _activitySource = activitySource;
-            _meter = meter;
+            _tracerProvider = tracerProvider;
+            _meterProvider = meterProvider;
+            _tracer = _tracerProvider.GetTracer("AppInsightsSample");
+            _meter = _meterProvider.GetMeter("AppInsightsSample");
         }
         
         public async Task RunAsync()
         {
             _logger.LogInformation("Starting sample operations");
             
-            var operationCounter = _meter.CreateCounter<int>("sample.operations");
+            var operationCounter = _meter.CreateCounter<long>("sample.operations");
             var operationDuration = _meter.CreateHistogram<double>("sample.operation.duration");
             
-            using var parentActivity = _activitySource.StartActivity("ParentOperation", ActivityKind.Internal);
-            parentActivity?.SetTag("operation.type", "parent");
-            parentActivity?.SetTag("operation.id", Guid.NewGuid().ToString());
+            var parentSpan = _tracer.StartSpan("ParentOperation", SpanKind.Internal);
+            var parentContext = parentSpan.Context;
             
-            _logger.LogDebug("Parent operation started with ID: {ActivityId}", parentActivity?.Id);
-            
-            var startTime = DateTime.UtcNow;
-            
-            try
+            using (parentSpan)
             {
-                await PerformChildOperationAsync("ChildOperation1");
+                parentSpan.SetAttribute("operation.type", "parent");
+                parentSpan.SetAttribute("operation.id", Guid.NewGuid().ToString());
                 
-                await PerformLinkedOperationAsync("ChildOperation2", parentActivity);
+                _logger.LogDebug("Parent operation started with ID: {SpanId}", parentSpan.Context.SpanId);
                 
-                operationCounter.Add(1, new KeyValuePair<string, object?>("result", "success"));
+                var startTime = DateTime.UtcNow;
                 
-                _logger.LogInformation("All operations completed successfully");
-            }
-            catch (Exception ex)
-            {
-                operationCounter.Add(1, new KeyValuePair<string, object?>("result", "failure"));
-                
-                _logger.LogError(ex, "An error occurred during sample operations");
-                
-                parentActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            }
-            finally
-            {
-                var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
-                operationDuration.Record(duration);
-                
-                parentActivity?.AddEvent(new ActivityEvent("Operation completed", 
-                    DateTime.UtcNow, 
-                    new ActivityTagsCollection { 
+                try
+                {
+                    await PerformChildOperationAsync("ChildOperation1", parentContext);
+                    
+                    await PerformLinkedOperationAsync("ChildOperation2", parentContext);
+                    
+                    operationCounter.Add(1, new KeyValuePair<string, object>("result", "success"));
+                    
+                    _logger.LogInformation("All operations completed successfully");
+                }
+                catch (Exception ex)
+                {
+                    operationCounter.Add(1, new KeyValuePair<string, object>("result", "failure"));
+                    
+                    _logger.LogError(ex, "An error occurred during sample operations");
+                    
+                    parentSpan.SetStatus(Status.Error.WithDescription(ex.Message));
+                }
+                finally
+                {
+                    var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                    operationDuration.Record(duration);
+                    
+                    parentSpan.AddEvent("Operation completed", new SpanAttributes
+                    {
                         { "duration_ms", duration },
                         { "success", true }
-                    }));
-                
-                _logger.LogDebug("Parent operation completed in {DurationMs}ms", duration);
+                    });
+                    
+                    _logger.LogDebug("Parent operation completed in {DurationMs}ms", duration);
+                }
             }
         }
         
-        private async Task PerformChildOperationAsync(string operationName)
+        private async Task PerformChildOperationAsync(string operationName, SpanContext parentContext)
         {
-            using var childActivity = _activitySource.StartActivity(
-                operationName, 
-                ActivityKind.Internal, 
-                parentContext: Activity.Current?.Context);
-                
-            childActivity?.SetTag("operation.name", operationName);
+            using var scope = parentContext.IsValid ? Baggage.Current.Activate() : default;
             
-            _logger.LogInformation("Performing child operation: {OperationName}", operationName);
-            
-            await Task.Delay(500);
-            
-            _logger.LogDebug("Child operation completed: {OperationName}", operationName);
-        }
-        
-        private async Task PerformLinkedOperationAsync(string operationName, Activity? parentActivity)
-        {
-            var links = new List<ActivityLink>();
-            if (parentActivity != null)
+            var childSpan = _tracer.StartSpan(operationName, SpanKind.Internal);
+            using (childSpan)
             {
-                links.Add(new ActivityLink(parentActivity.Context));
-            }
-            
-            using var linkedActivity = _activitySource.StartActivity(
-                operationName,
-                ActivityKind.Internal,
-                parentContext: Activity.Current?.Context,
-                links: links);
+                childSpan.SetAttribute("operation.name", operationName);
                 
-            linkedActivity?.SetTag("operation.name", operationName);
-            linkedActivity?.SetTag("has_link", "true");
-            
-            _logger.LogInformation("Performing linked operation: {OperationName}", operationName);
-            
-            await Task.Delay(300);
-            
-            linkedActivity?.AddEvent(new ActivityEvent("Processing step completed"));
-            
-            _logger.LogDebug("Linked operation completed: {OperationName}", operationName);
+                _logger.LogInformation("Performing child operation: {OperationName}", operationName);
+                
+                await Task.Delay(500);
+                
+                _logger.LogDebug("Child operation completed: {OperationName}", operationName);
+            }
+        }
+        
+        private async Task PerformLinkedOperationAsync(string operationName, SpanContext parentContext)
+        {
+            var linkedSpan = _tracer.StartSpan(
+                operationName,
+                SpanKind.Internal,
+                new SpanContext(parentContext.TraceId, SpanId.CreateRandom(), parentContext.TraceFlags, parentContext.IsRemote));
+                
+            using (linkedSpan)
+            {
+                linkedSpan.SetAttribute("operation.name", operationName);
+                linkedSpan.SetAttribute("has_link", true);
+                
+                _logger.LogInformation("Performing linked operation: {OperationName}", operationName);
+                
+                await Task.Delay(300);
+                
+                linkedSpan.AddEvent("Processing step completed");
+                
+                _logger.LogDebug("Linked operation completed: {OperationName}", operationName);
+            }
         }
     }
 }

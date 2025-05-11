@@ -19,10 +19,21 @@ namespace OpenTelemetryExtensions.Extensions
     {
         public static IServiceCollection AddTelemetry(this IServiceCollection services, IConfiguration configuration)
         {
-            var telemetryConfig = new TelemetryConfig();
-            configuration.GetSection(TelemetryConfig.SectionName).Bind(telemetryConfig);
+            Console.WriteLine($"DEBUG: Loading telemetry configuration from section '{TelemetryConfig.SectionName}'");
             
-            services.Configure<TelemetryConfig>(configuration.GetSection(TelemetryConfig.SectionName));
+            var configSection = configuration.GetSection(TelemetryConfig.SectionName);
+            Console.WriteLine($"DEBUG: Configuration section exists: {configSection.Exists()}");
+            
+            var telemetryConfig = new TelemetryConfig();
+            configSection.Bind(telemetryConfig);
+            
+            Console.WriteLine($"DEBUG: Loaded configuration values:");
+            Console.WriteLine($"  - Resource.Environment: {telemetryConfig.Resource.Environment}");
+            Console.WriteLine($"  - Resource.Component: {telemetryConfig.Resource.Component}");
+            Console.WriteLine($"  - Exporters.Console.Enabled: {telemetryConfig.Exporters.Console.Enabled}");
+            Console.WriteLine($"  - Exporters.AppInsights.Enabled: {telemetryConfig.Exporters.AppInsights.Enabled}");
+            
+            services.Configure<TelemetryConfig>(configSection);
             
             services.AddSerilog(telemetryConfig, configuration);
             

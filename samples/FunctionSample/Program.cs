@@ -13,6 +13,9 @@ var host = new HostBuilder()
     .ConfigureServices((context, services) =>
     {
         services.AddTelemetry(context.Configuration);
+        
+        Console.WriteLine("IMPORTANT: To see traces in App Insights, make sure to set a valid App Insights connection string");
+        Console.WriteLine("in local.settings.json under telemetry:exporters:appInsights:connectionString and Values:APPLICATIONINSIGHTS_CONNECTION_STRING");
     })
     .Build();
 

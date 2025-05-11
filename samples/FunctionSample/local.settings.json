@@ -46,7 +46,7 @@
         "includeScopes": true
       },
       "appInsights": {
-        "enabled": false,
+        "enabled": true,
         "connectionString": "YOUR_APP_INSIGHTS_CONNECTION_STRING"
       },
       "datadog": {

@@ -97,10 +97,6 @@ namespace OpenTelemetryExtensions.Extensions
             
             builder.ConfigureResource(resourceBuilder => ConfigureResource(resourceBuilder, config.Resource));
             
-            builder.WithTracing(tracerProviderBuilder => ConfigureTracing(tracerProviderBuilder, config));
-            
-            builder.WithMetrics(meterProviderBuilder => ConfigureMetrics(meterProviderBuilder, config));
-            
             if (config.Exporters.AppInsights.Enabled)
             {
                 builder.UseAzureMonitor(options =>
@@ -108,6 +104,9 @@ namespace OpenTelemetryExtensions.Extensions
                     options.ConnectionString = config.Exporters.AppInsights.ConnectionString;
                 });
             }
+            
+            builder.WithTracing(tracerProviderBuilder => ConfigureTracing(tracerProviderBuilder, config));
+            builder.WithMetrics(meterProviderBuilder => ConfigureMetrics(meterProviderBuilder, config));
             
             return services;
         }
@@ -148,6 +147,9 @@ namespace OpenTelemetryExtensions.Extensions
             {
                 options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Console;
             });
+            // Note: App Insights traces are configured through UseAzureMonitor() in the AddOpenTelemetry method
+            // This ensures traces are properly sent to App Insights when enabled
+            
             
             if (config.Datadog.Enabled)
             {

@@ -28,6 +28,9 @@ foreach (var provider in ((IConfigurationRoot)builder.Configuration).Providers)
     Console.WriteLine($" - {provider.GetType().Name}");
 }
 
+Console.WriteLine("IMPORTANT: To see traces in App Insights, make sure to set a valid App Insights connection string");
+Console.WriteLine("in appsettings.json under telemetry:exporters:appInsights:connectionString");
+
 var telemetryConfig = builder.Configuration.GetSection("telemetry");
 if (telemetryConfig.Exists())
 {

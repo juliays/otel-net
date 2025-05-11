@@ -5,6 +5,31 @@
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "YOUR_APP_INSIGHTS_CONNECTION_STRING"
   },
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "System": "Warning"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Console",
+        "Args": {
+          "formatter": "Serilog.Formatting.Compact.CompactJsonFormatter, Serilog.Formatting.Compact"
+        }
+      },
+      {
+        "Name": "ApplicationInsights",
+        "Args": {
+          "connectionString": "YOUR_APP_INSIGHTS_CONNECTION_STRING",
+          "telemetryConverter": "Serilog.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter, Serilog.Sinks.ApplicationInsights"
+        }
+      }
+    ],
+    "Enrich": ["FromLogContext", "WithMachineName", "WithThreadId"]
+  },
   "telemetry": {
     "resource": {
       "environment": "development",
@@ -14,31 +39,6 @@
       "cloud_provider": "azure",
       "opt-dora": "false",
       "opt-service-id": "srv-12345"
-    },
-    "Serilog": {
-      "MinimumLevel": {
-        "Default": "Information",
-        "Override": {
-          "Microsoft": "Warning",
-          "System": "Warning"
-        }
-      },
-      "WriteTo": [
-        {
-          "Name": "Console",
-          "Args": {
-            "formatter": "Serilog.Formatting.Compact.CompactJsonFormatter, Serilog.Formatting.Compact"
-          }
-        },
-        {
-          "Name": "ApplicationInsights",
-          "Args": {
-            "connectionString": "YOUR_APP_INSIGHTS_CONNECTION_STRING",
-            "telemetryConverter": "Serilog.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter, Serilog.Sinks.ApplicationInsights"
-          }
-        }
-      ],
-      "Enrich": ["FromLogContext", "WithMachineName", "WithThreadId"]
     },
     "exporters": {
       "console": {

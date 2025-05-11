@@ -9,7 +9,9 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using OpenTelemetryExtensions.Configuration;
+using OpenTelemetryExtensions.Enrichers;
 using Serilog;
+using Serilog.Context;
 
 namespace OpenTelemetryExtensions.Extensions
 {
@@ -21,6 +23,7 @@ namespace OpenTelemetryExtensions.Extensions
             configuration.GetSection(TelemetryConfig.SectionName).Bind(telemetryConfig);
             
             services.Configure<TelemetryConfig>(configuration.GetSection(TelemetryConfig.SectionName));
+            services.AddSingleton(telemetryConfig);
             
             services.AddSerilog(telemetryConfig, configuration);
             
@@ -38,34 +41,87 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static IServiceCollection AddSerilog(this IServiceCollection services, TelemetryConfig config, IConfiguration configuration)
         {
+            var resourceAttributes = new Dictionary<string, object>
+            {
+                ["environment"] = config.Resource.Environment,
+                ["component"] = config.Resource.Component,
+                ["workspace_id"] = config.Resource.WorkspaceId,
+                ["notebook_id"] = config.Resource.NotebookId,
+                ["livy_id"] = config.Resource.LivyId,
+                ["region"] = config.Resource.Region,
+                ["website_name"] = config.Resource.WebsiteName,
+                ["website_instance"] = config.Resource.WebsiteInstance,
+                ["mnd-applicationid"] = config.Resource.ApplicationId,
+                ["cloud_provider"] = config.Resource.CloudProvider,
+                ["opt-dora"] = config.Resource.OptDora,
+                ["opt-service-id"] = config.Resource.OptServiceId,
+                ["service.name"] = config.Resource.Component
+            };
+            
             var loggerConfiguration = new LoggerConfiguration()
-                .ReadFrom.Configuration(configuration.GetSection($"{TelemetryConfig.SectionName}:Serilog"));
+                .ReadFrom.Configuration(configuration);
+            
+            loggerConfiguration.WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter());
+            
+            loggerConfiguration.Enrich.With<TraceContextEnricher>();
+            
+            foreach (var attribute in resourceAttributes)
+            {
+                if (!string.IsNullOrEmpty(attribute.Value?.ToString()))
+                {
+                    loggerConfiguration.Enrich.WithProperty(attribute.Key, attribute.Value);
+                }
+            }
             
             Log.Logger = loggerConfiguration.CreateLogger();
             
-            services.AddLogging(builder => builder.AddSerilog(dispose: true));
+            services.AddLogging(builder => 
+            {
+                builder.ClearProviders();
+                
+                builder.AddSerilog(Log.Logger, dispose: true);
+                
+                foreach (var attribute in resourceAttributes)
+                {
+                    if (!string.IsNullOrEmpty(attribute.Value?.ToString()))
+                    {
+                        LogContext.PushProperty(attribute.Key, attribute.Value);
+                    }
+                }
+            });
+            
+            services.AddSingleton(Log.Logger);
             
             return services;
         }
         
         private static IServiceCollection AddOpenTelemetry(this IServiceCollection services, TelemetryConfig config)
         {
-            if (config.Exporters.AppInsights.Enabled)
-            {
-                services.AddOpenTelemetry().UseAzureMonitor(options =>
-                {
-                    options.ConnectionString = config.Exporters.AppInsights.ConnectionString;
-                });
-                
-                return services;
-            }
-            
             var builder = services.AddOpenTelemetry();
             
             builder.ConfigureResource(resourceBuilder => ConfigureResource(resourceBuilder, config.Resource));
             
-            builder.WithTracing(tracerProviderBuilder => ConfigureTracing(tracerProviderBuilder, config));
+            if (config.Exporters.AppInsights.Enabled)
+            {
+                var connectionString = config.Exporters.AppInsights.ConnectionString;
+                if (!string.IsNullOrEmpty(connectionString) && 
+                    !connectionString.Contains("YOUR_") && 
+                    !connectionString.Equals("your-connection-string", StringComparison.OrdinalIgnoreCase))
+                {
+                    builder.UseAzureMonitor(options =>
+                    {
+                        options.ConnectionString = connectionString;
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("WARNING: App Insights is enabled but connection string appears to be a placeholder.");
+                    Console.WriteLine("Skipping App Insights configuration to avoid runtime errors.");
+                    Console.WriteLine("Set a valid connection string in the configuration to enable App Insights telemetry.");
+                }
+            }
             
+            builder.WithTracing(tracerProviderBuilder => ConfigureTracing(tracerProviderBuilder, config));
             builder.WithMetrics(meterProviderBuilder => ConfigureMetrics(meterProviderBuilder, config));
             
             return services;
@@ -102,11 +158,10 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static void ConfigureTracingExporters(TracerProviderBuilder builder, ExporterConfig config)
         {
-            if (config.Console.Enabled)
+            builder.AddConsoleExporter(options => 
             {
-                builder.AddConsoleExporter();
-            }
-            
+                options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Console;
+            });
             
             if (config.Datadog.Enabled)
             {
@@ -130,11 +185,10 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static void ConfigureMetricsExporters(MeterProviderBuilder builder, ExporterConfig config)
         {
-            if (config.Console.Enabled)
+            builder.AddConsoleExporter(options => 
             {
-                builder.AddConsoleExporter();
-            }
-            
+                options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Console;
+            });
             
             if (config.Datadog.Enabled)
             {

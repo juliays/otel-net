@@ -18,11 +18,33 @@ namespace OpenTelemetryExtensions.Extensions
             return builder;
         }
         
+        public static IHostBuilder AddTelemetry(this IHostBuilder builder, IConfiguration configuration)
+        {
+            builder.ConfigureServices((context, services) =>
+            {
+                services.AddTelemetry(configuration ?? context.Configuration);
+            });
+            
+            return builder;
+        }
+        
         public static IHostBuilder AddTelemetry(this IHostBuilder builder, Action<OpenTelemetryBuilder> configureOptions)
         {
             builder.ConfigureServices((context, services) =>
             {
                 services.AddTelemetry(context.Configuration);
+                
+                services.AddOpenTelemetry(configureOptions);
+            });
+            
+            return builder;
+        }
+        
+        public static IHostBuilder AddTelemetry(this IHostBuilder builder, IConfiguration configuration, Action<OpenTelemetryBuilder> configureOptions)
+        {
+            builder.ConfigureServices((context, services) =>
+            {
+                services.AddTelemetry(configuration ?? context.Configuration);
                 
                 services.AddOpenTelemetry(configureOptions);
             });

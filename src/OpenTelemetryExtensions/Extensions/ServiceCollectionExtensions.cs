@@ -99,10 +99,22 @@ namespace OpenTelemetryExtensions.Extensions
             
             if (config.Exporters.AppInsights.Enabled)
             {
-                builder.UseAzureMonitor(options =>
+                var connectionString = config.Exporters.AppInsights.ConnectionString;
+                if (!string.IsNullOrEmpty(connectionString) && 
+                    !connectionString.Contains("YOUR_") && 
+                    !connectionString.Equals("your-connection-string", StringComparison.OrdinalIgnoreCase))
                 {
-                    options.ConnectionString = config.Exporters.AppInsights.ConnectionString;
-                });
+                    builder.UseAzureMonitor(options =>
+                    {
+                        options.ConnectionString = connectionString;
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("WARNING: App Insights is enabled but connection string appears to be a placeholder.");
+                    Console.WriteLine("Skipping App Insights configuration to avoid runtime errors.");
+                    Console.WriteLine("Set a valid connection string in the configuration to enable App Insights telemetry.");
+                }
             }
             
             builder.WithTracing(tracerProviderBuilder => ConfigureTracing(tracerProviderBuilder, config));

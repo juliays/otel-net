@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
@@ -18,7 +20,7 @@ namespace FunctionSample
         private readonly TracerProvider _tracerProvider;
         private readonly MeterProvider _meterProvider;
         private readonly Tracer _tracer;
-        private readonly OpenTelemetry.Metrics.Meter _meter;
+        private readonly Meter _meter;
         
         private readonly Counter<long> _requestCounter;
         private readonly Histogram<double> _requestDuration;
@@ -30,7 +32,7 @@ namespace FunctionSample
             _meterProvider = meterProvider;
             
             _tracer = _tracerProvider.GetTracer("FunctionSample");
-            _meter = _meterProvider.GetMeter("FunctionSample");
+            _meter = new Meter("FunctionSample");
             
             _requestCounter = _meter.CreateCounter<long>("function.requests");
             _requestDuration = _meter.CreateHistogram<double>("function.request.duration");
@@ -82,10 +84,8 @@ namespace FunctionSample
                     var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
                     _requestDuration.Record(duration, new KeyValuePair<string, object>("function", "Hello"));
                     
-                    span.AddEvent("Function completed", new SpanAttributes
-                    {
-                        { "duration_ms", duration }
-                    });
+                    span.AddEvent("Function completed");
+                    span.SetAttribute("duration_ms", duration);
                     
                     _logger.LogDebug("Function execution completed in {DurationMs}ms", duration);
                 }
@@ -168,8 +168,6 @@ namespace FunctionSample
         
         private async Task PerformOperationAsync(string operationName, SpanContext parentContext)
         {
-            using var scope = parentContext.IsValid ? Baggage.Current.Activate() : default;
-            
             var childSpan = _tracer.StartSpan(operationName, SpanKind.Internal);
             using (childSpan)
             {
@@ -187,8 +185,7 @@ namespace FunctionSample
         {
             var linkedSpan = _tracer.StartSpan(
                 operationName,
-                SpanKind.Internal,
-                new SpanContext(parentContext.TraceId, SpanId.CreateRandom(), parentContext.TraceFlags, parentContext.IsRemote));
+                SpanKind.Internal);
                 
             using (linkedSpan)
             {

@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.IO;
 using System.Threading.Tasks;
 using TelemetryLibrary;
 
@@ -20,13 +21,32 @@ const string ServiceName = "WebApiSample";
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+Console.WriteLine("Configuration sources loaded:");
+foreach (var provider in ((IConfigurationRoot)builder.Configuration).Providers)
+{
+    Console.WriteLine($" - {provider.GetType().Name}");
+}
+
+var telemetryConfig = builder.Configuration.GetSection("telemetry");
+if (telemetryConfig.Exists())
+{
+    Console.WriteLine("Telemetry configuration found in appsettings.json");
+    Console.WriteLine($" - Environment: {telemetryConfig.GetValue<string>("resource:environment")}");
+    Console.WriteLine($" - Component: {telemetryConfig.GetValue<string>("resource:component")}");
+}
+else
+{
+    Console.WriteLine("No telemetry configuration found in appsettings.json");
+}
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddTransient<SimpleService>();
 
-builder.AddTelemetry();
+builder.AddTelemetry(builder.Configuration);
 
 var app = builder.Build();
 

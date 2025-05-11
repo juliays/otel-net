@@ -143,13 +143,11 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static void ConfigureTracingExporters(TracerProviderBuilder builder, ExporterConfig config)
         {
-            if (config.Console.Enabled)
+            // Always add console exporter for traces regardless of configuration
+            builder.AddConsoleExporter(options => 
             {
-                builder.AddConsoleExporter(options => 
-                {
-                    options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Debug;
-                });
-            }
+                options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Console;
+            });
             
             if (config.Datadog.Enabled)
             {
@@ -173,13 +171,11 @@ namespace OpenTelemetryExtensions.Extensions
         
         private static void ConfigureMetricsExporters(MeterProviderBuilder builder, ExporterConfig config)
         {
-            if (config.Console.Enabled)
+            // Always add console exporter for metrics regardless of configuration
+            builder.AddConsoleExporter(options => 
             {
-                builder.AddConsoleExporter(options => 
-                {
-                    options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Debug;
-                });
-            }
+                options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Console;
+            });
             
             if (config.Datadog.Enabled)
             {

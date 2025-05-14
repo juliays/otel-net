@@ -7,7 +7,9 @@ using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Lmp.Telemetry.Configuration;
 using Lmp.Telemetry.Constants;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -33,8 +35,6 @@ public static class TelemetryExtensions
         ArgumentNullException.ThrowIfNull(hostBuilder);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        var telemetryOptions = BindTelemetryOptions(configuration);
-
         hostBuilder.ConfigureLogging(logging =>
         {
             logging.ClearProviders();
@@ -48,47 +48,123 @@ public static class TelemetryExtensions
 
         hostBuilder.ConfigureServices((context, services) =>
         {
-            services.AddOpenTelemetry()
-                .ConfigureResource(builder =>
+            services.AddTelemetry(configuration);
+            
+            if (configureTracing != null || configureMetrics != null)
+            {
+                services.AddOpenTelemetry(builder =>
                 {
-                    builder.AddService(telemetryOptions.Resource.Component);
-                })
-                .WithTracing(tracerProviderBuilder =>
-                {
-                    tracerProviderBuilder
-                        .AddSource(telemetryOptions.Resource.Component)
-                        .AddHttpClientInstrumentation()
-                        .AddAspNetCoreInstrumentation();
-
-                    if (telemetryOptions.Tracer.SampleRate > 0)
+                    if (configureTracing != null)
                     {
-                        tracerProviderBuilder.SetSampler(new TraceIdRatioBasedSampler(telemetryOptions.Tracer.SampleRate));
+                        builder.WithTracing(tracerProviderBuilder => 
+                        {
+                            configureTracing(tracerProviderBuilder);
+                        });
                     }
-                    else
+                    
+                    if (configureMetrics != null)
                     {
-                        tracerProviderBuilder.SetSampler(new AlwaysOnSampler());
+                        builder.WithMetrics(meterProviderBuilder => 
+                        {
+                            configureMetrics(meterProviderBuilder);
+                        });
                     }
-
-                    ConfigureOpenTelemetryTraceExporter(tracerProviderBuilder, telemetryOptions);
-
-                    configureTracing?.Invoke(tracerProviderBuilder);
-                })
-                .WithMetrics(meterProviderBuilder =>
-                {
-                    meterProviderBuilder
-                        .AddMeter(telemetryOptions.Resource.Component)
-                        .SetExemplarFilter(ExemplarFilterType.TraceBased)
-                        .AddRuntimeInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddAspNetCoreInstrumentation();
-
-                    ConfigureOpenTelemetryMetricsExporter(meterProviderBuilder, telemetryOptions);
-
-                    configureMetrics?.Invoke(meterProviderBuilder);
                 });
+            }
         });
 
         return hostBuilder;
+    }
+    
+    public static WebApplicationBuilder AddOpenTelemetry(
+        this WebApplicationBuilder builder,
+        Action<TracerProviderBuilder>? configureTracing = null,
+        Action<MeterProviderBuilder>? configureMetrics = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        
+        builder.Host.UseSerilog((context, services, loggerConfig) =>
+        {
+            loggerConfig.ReadFrom.Configuration(context.Configuration)
+                        .Enrich.With<TraceContextEnricher>();
+        });
+        
+        builder.Services.AddTelemetry(builder.Configuration);
+        
+        if (configureTracing != null || configureMetrics != null)
+        {
+            builder.Services.AddOpenTelemetry(otBuilder =>
+            {
+                if (configureTracing != null)
+                {
+                    otBuilder.WithTracing(tracerProviderBuilder => 
+                    {
+                        configureTracing(tracerProviderBuilder);
+                    });
+                }
+                
+                if (configureMetrics != null)
+                {
+                    otBuilder.WithMetrics(meterProviderBuilder => 
+                    {
+                        configureMetrics(meterProviderBuilder);
+                    });
+                }
+            });
+        }
+        
+        return builder;
+    }
+    
+    public static IFunctionsHostBuilder AddOpenTelemetry(
+        this IFunctionsHostBuilder builder,
+        Action<TracerProviderBuilder>? configureTracing = null,
+        Action<MeterProviderBuilder>? configureMetrics = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        
+        var services = builder.Services;
+        
+        var serviceProvider = services.BuildServiceProvider();
+        var configuration = serviceProvider.GetService<IConfiguration>() ?? 
+            throw new InvalidOperationException("Configuration not found in service provider");
+        
+        Log.Logger = new LoggerConfiguration()
+            .ReadFrom.Configuration(configuration)
+            .Enrich.With<TraceContextEnricher>()
+            .CreateLogger();
+            
+        services.AddLogging(loggingBuilder =>
+        {
+            loggingBuilder.ClearProviders();
+            loggingBuilder.AddSerilog(dispose: true);
+        });
+        
+        services.AddTelemetry(configuration);
+        
+        if (configureTracing != null || configureMetrics != null)
+        {
+            services.AddOpenTelemetry(otBuilder =>
+            {
+                if (configureTracing != null)
+                {
+                    otBuilder.WithTracing(tracerProviderBuilder => 
+                    {
+                        configureTracing(tracerProviderBuilder);
+                    });
+                }
+                
+                if (configureMetrics != null)
+                {
+                    otBuilder.WithMetrics(meterProviderBuilder => 
+                    {
+                        configureMetrics(meterProviderBuilder);
+                    });
+                }
+            });
+        }
+        
+        return builder;
     }
 
     public static void ConfigureOpenTelemetryTraceExporter(TracerProviderBuilder builder, TelemetryOptions telemetryOptions)

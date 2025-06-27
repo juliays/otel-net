@@ -60,7 +60,7 @@ http://localhost:7071/api/Hello
 Or using curl:
 
 ```bash
-curl http://localhost:7071/api/Hello
+
 ```
 
 ## Viewing Telemetry
@@ -69,3 +69,4 @@ After running the sample and making requests, you can view the telemetry in the 
 1. Navigate to your Application Insights resource
 2. Go to "Transaction Search" or "Application Map" to see the traces
 3. Check "Logs" to query the telemetry data
+curl http://localhost:7071/api/Hello

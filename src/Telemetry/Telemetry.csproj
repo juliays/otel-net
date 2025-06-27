@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="./build-settings/dotnet/common.props" />
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace>Telemetry</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Telemetry</PackageId>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Description>The Telemetry Library that Encapsulates OpenTelemetry Config Details from Client Applications</Description>
+     <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="telemetry.json" />
+  </ItemGroup>
+
+  <ItemGroup Label="Pack telemetry.json for package references">
+    <Content Include="build/Telemetry.targets" Pack="true" PackagePath="build/" />
+    <None Include="telemetry.json" Pack="true" PackagePath="build/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="$(AzureMonitorOpenTelemetryAspNetCoreVersion)" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="$(AzureMonitorOpenTelemetryExporterVersion)" />
+    <PackageReference Include="OpenTelemetry" Version="$(OpenTelemetryVersion)" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="$(OpenTelemetryExporterConsoleVersion)" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryExtensionsHostingVersion)" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryExporterOpenTelemetryProtocolVersion)" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryInstrumentationAspNetCoreVersion)" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="$(MicrosoftApplicationInsightsAspNetCoreVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensionsHostingVersion)" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryInstrumentationHttpVersion)" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryInstrumentationRuntimeVersion)" />
+    <PackageReference Include="Serilog" Version="$(SerilogVersion)" />
+    <PackageReference Include="Serilog.Enrichers.GlobalLogContext" Version="$(SerilogEnrichersGlobalLogContextVersion)" />
+    <PackageReference Include="Serilog.Enrichers.Span" Version="$(SerilogEnrichersSpanVersion)" />
+    <PackageReference Include="Serilog.Exceptions" Version="$(SerilogExceptionsVersion)" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="$(SerilogExtensionsLoggingVersion)" />
+    <PackageReference Include="Serilog.Formatting.Compact" Version="$(SerilogFormattingCompactVersion)" />
+    <PackageReference Include="SeriLog.Settings.Configuration" Version="$(SerilogSettingsConfigurationVersion)" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="$(SerilogSinksApplicationInsightsVersion)" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="$(SerilogSinksConsoleVersion)" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="$(SerilogExtensionsHostingVersion)" />
+  </ItemGroup>
+
+</Project>

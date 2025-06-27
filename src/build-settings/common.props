@@ -1,0 +1,81 @@
+<Project>
+  <ItemGroup Condition="'$(ManagePackageVersionsCentrally)' != 'true'">
+    <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzersVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
+  </ItemGroup>
+  <ItemGroup Condition="'$(ManagePackageVersionsCentrally)' == 'true'">
+    <GlobalPackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzersVersion)">
+    </GlobalPackageReference>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <TargetFramework>net8.0</TargetFramework>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-Recommended</AnalysisLevel>
+    <MicrosoftMainLibrariesVersion>8.0.0</MicrosoftMainLibrariesVersion>
+    <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
+    <NoWarn>NU5104</NoWarn> <!-- Do not warn about using pre-release package version -->
+
+    <!--Packages versions-->
+    <AzureCoreVersion>1.42.0</AzureCoreVersion>
+    <AzureIdentityVersion>1.12.0</AzureIdentityVersion>
+    <AzureMessagingServiceBusVersion>7.18.1</AzureMessagingServiceBusVersion>
+    <AzureMonitorOpenTelemetryExporterVersion>1.3.0</AzureMonitorOpenTelemetryExporterVersion>
+    <AzureMonitorOpenTelemetryAspNetCoreVersion>1.2.0</AzureMonitorOpenTelemetryAspNetCoreVersion>
+    <AzureSecurityKeyVaultSecretsVersion>4.6.0</AzureSecurityKeyVaultSecretsVersion>
+    <MicrosoftAzureFunctionsWorkerVersion>1.21.0</MicrosoftAzureFunctionsWorkerVersion>
+
+    <LmpTelemetryPushVersion>1.0.6</LmpTelemetryPushVersion>
+    <LmpTelemetryPullVersion>1.0.6</LmpTelemetryPullVersion>
+
+    <LsegDmsCommonPushVersion>1.0.15</LsegDmsCommonPushVersion>
+    <LsegDmsCommonPullVersion>1.0.15</LsegDmsCommonPullVersion>
+
+    <MicrosoftAzureFunctionsWorkerExtensionsHttpVersion>3.1.0</MicrosoftAzureFunctionsWorkerExtensionsHttpVersion>
+    <MicrosoftAzureFunctionsWorkerExtensionsHttpAspNetCoreVersion>1.2.1</MicrosoftAzureFunctionsWorkerExtensionsHttpAspNetCoreVersion>
+    <MicrosoftAzureFunctionsWorkerExtensionsServiceBusVersion>5.22.0</MicrosoftAzureFunctionsWorkerExtensionsServiceBusVersion>
+    <MicrosoftAzureFunctionsWorkerSdkVersion>1.17.2</MicrosoftAzureFunctionsWorkerSdkVersion>
+    <MicrosoftApplicationInsightsWorkerServiceVersion>2.22.0</MicrosoftApplicationInsightsWorkerServiceVersion>
+    <MicrosoftAzureFunctionsWorkerApplicationInsightsVersion>1.2.0</MicrosoftAzureFunctionsWorkerApplicationInsightsVersion>
+    <OpenTelemetryVersion>1.12.0</OpenTelemetryVersion>
+    <OpenTelemetryExporterConsoleVersion>1.12.0</OpenTelemetryExporterConsoleVersion>
+    <OpenTelemetryExporterInMemoryVersion>1.12.0</OpenTelemetryExporterInMemoryVersion>
+    <OpenTelemetryExtensionsHostingVersion>1.12.0</OpenTelemetryExtensionsHostingVersion>
+    <OpenTelemetryExporterOpenTelemetryProtocolVersion>1.12.0</OpenTelemetryExporterOpenTelemetryProtocolVersion>
+    <OpenTelemetryInstrumentationAspNetCoreVersion>1.8.1</OpenTelemetryInstrumentationAspNetCoreVersion>
+    <OpenTelemetryInstrumentationHttpVersion>1.12.0</OpenTelemetryInstrumentationHttpVersion>
+    <OpenTelemetryInstrumentationRuntimeVersion>1.0.0</OpenTelemetryInstrumentationRuntimeVersion>
+    <OpenTelemetryExporterConsoleVersion>1.9.0</OpenTelemetryExporterConsoleVersion>
+    <OpenTelemetryExporterInMemoryVersion>1.9.0</OpenTelemetryExporterInMemoryVersion>
+    <OpenTelemetryExtensionsHostingVersion>1.12.0</OpenTelemetryExtensionsHostingVersion>
+    <PollyCoreVersion>8.5.2</PollyCoreVersion>
+    <SystemDiagnosticsDiagnosticSourceVersion>9.0.0</SystemDiagnosticsDiagnosticSourceVersion>
+    <MicrosoftAzureCosmosVersion>3.45.0</MicrosoftAzureCosmosVersion>
+    <AzureStorageFilesDataLakeVersion>12.19.1</AzureStorageFilesDataLakeVersion>
+    <MicrosoftApplicationInsightsAspNetCoreVersion>2.22.0</MicrosoftApplicationInsightsAspNetCoreVersion>
+    <SwashbuckleAspNetCoreVersion>6.4.0</SwashbuckleAspNetCoreVersion>
+    <AzureSearchDocumentsVersion>11.6.0</AzureSearchDocumentsVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>8.0.0</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsHostingVersion>9.0.0</MicrosoftExtensionsHostingVersion>
+    <MicrosoftAzureFunctionsWorkerExtensionsTimerVersion>4.3.1</MicrosoftAzureFunctionsWorkerExtensionsTimerVersion>
+    <MicrosoftExtensionsDiagnosticsHealthChecks>9.0.0</MicrosoftExtensionsDiagnosticsHealthChecks>
+    <SerilogVersion>4.2.0</SerilogVersion>
+    <SerilogEnrichersSpanVersion>3.1.0</SerilogEnrichersSpanVersion>
+    <SerilogEnrichersGlobalLogContextVersion>3.0.0</SerilogEnrichersGlobalLogContextVersion>
+    <SerilogExtensionsLoggingVersion>9.0.0</SerilogExtensionsLoggingVersion>
+    <SerilogFormattingCompactVersion>3.0.0</SerilogFormattingCompactVersion>
+    <SerilogSettingsConfigurationVersion>9.0.0</SerilogSettingsConfigurationVersion>
+    <SerilogSinksApplicationInsightsVersion>4.0.0</SerilogSinksApplicationInsightsVersion>
+    <SerilogSinksConsoleVersion>6.0.0</SerilogSinksConsoleVersion>
+    <SerilogExceptionsVersion>8.4.0</SerilogExceptionsVersion>
+    <SerilogExtensionsHostingVersion>9.0.0</SerilogExtensionsHostingVersion>
+  </PropertyGroup>
+</Project>

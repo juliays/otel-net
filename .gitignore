@@ -1,0 +1,81 @@
+# Un-ignore the vscode directory for build configurations
+!.vscode
+ 
+# Ignore all YAML files in the aci/ directory
+aci/*.yaml
+ 
+# User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+launchSettings.json
+ 
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+ 
+# Azure Functions
+local.settings.json
+ 
+# Python Tools for Visual Studio (PTVS)
+__pycache__/
+*.pyc
+.mypy_cache
+**/dist/*.whl
+**/dist/*.tar.gz
+.coverage.*
+ 
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+ 
+# Mac OS directories and files
+.DS_Store
+ 
+# Environment files
+.env
+ 
+# C extensions
+*.so
+ 
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+megalinter-reports/
+ 
+# Ignore test build results and system files
+tests/*/obj/
+tests/*/bin/
+tests/*/Features/*.feature.cs
+tests/*/Features/*/*.feature.cs
+tests/*/.vs/
+tests/*/TestResults/
+ 
+# Ignore azurite
+__blobstorage__
+__queuestorage__
+__azurite_db_blob__.json
+__azurite_db_blob_extent__.json
+__azurite_db_queue__.json
+__azurite_db_queue_extent__.json
+__azurite_db_table__.json
+ 
+# Ignore test results
+.coverage
+coverage.xml
+report.xml
+ 
+# Ignore temporary uploaded files
+*.csv:*
+ 

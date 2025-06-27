@@ -1,0 +1,35 @@
+{
+  "telemetry": {
+    "resource": {
+      "component": "",
+      "version": "",
+      "websiteName": "",
+      "websiteInstance": ""
+    },
+    "tracer": {
+      "sampleRate": 1.0
+    },
+    "exporters": {
+      "console": {
+        "enabled": false,
+        "includeScopes": true
+      },
+      "appInsights": {
+        "enabled": false,
+        "connectionString": ""
+      }
+    }
+  },
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "",
+      "Override": {
+          "Microsoft": "Warning",
+          "System": "Warning"
+      }
+    },
+    "Using": [],
+    "WriteTo": [],
+    "Enrich": ["FromLogContext", "WithMachineName", "WithThreadId"]
+  }
+}
